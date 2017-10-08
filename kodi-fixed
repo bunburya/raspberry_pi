@@ -1,0 +1,10 @@
+#!/bin/sh
+
+# This script runs kodi-standalone and then runs some clean-up commands
+# afterwards so that the screen resolution is fixed.
+
+kodi-standalone
+
+tvservice -p
+sudo chvt 6
+sudo chvt 7
