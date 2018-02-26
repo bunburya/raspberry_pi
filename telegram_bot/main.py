@@ -53,7 +53,7 @@ class Bot:
         if chat_id != self.valid_id:
             print('ID {} not valid.'.format(chat_id))
             self.bot.sendMessage(self.valid_id,
-                'Unauthorised message {} from ID {}.'.format(chat_id, txt))
+                'Unauthorised message {} from ID {}.'.format(chat_id, chat_id))
             return
         else:
             self.handle_globally(content_type, msg)
