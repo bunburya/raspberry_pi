@@ -9,8 +9,6 @@ import raspicam_utils
 
 class MonitorPlugin(Plugin):
     
-    
-    
     def __init__(self):
         self.raspicam = raspicam_utils.RaspiCam()
         self.handlers = {'text': self.handle_text}
