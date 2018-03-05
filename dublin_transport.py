@@ -18,6 +18,11 @@ class DublinTransportData:
     WU_URL =    ('http://api.wunderground.com/api/{}/'
                 'conditions/q/ie/{}.json')
 
+    LUAS_DESTS = {
+                    'INBOUND': {'LUAS The Point', 'LUAS Connolly'},
+                    'OUTBOUND': {'LUAS Tallaght', 'LUAS Saggart', 'LUAS Red Cow'}
+                    }
+
     def __init__(self, conf_file=None):
         
         self.conf_file = conf_file or expanduser('~/.config/dublin_transport.ini')
@@ -40,6 +45,9 @@ class DublinTransportData:
 
     def get_all_data(self):
 
+        # TODO:  Build separate functions to get bus, bike and weather data
+        # and just call them all from here
+
         results = {'LUAS': {}, 'BUS': {}, 'BIKE': {}, 'WEATHER': {}}
 
         for stop in self.LUAS_STOPS:
@@ -55,6 +63,28 @@ class DublinTransportData:
             station_id = self.WEATHER_STATIONS[station]
             results['WEATHER'][station] = self.fetch_weather_data(station_id)
         return results
+
+    def get_luas_data(self):
+        data = {'INBOUND': {}, 'OUTBOUND': {}}
+        for stop in self.LUAS_STOPS:
+            stop_id = self.LUAS_STOPS[stop]
+            results = self.fetch_rtpi_data(stop_id)
+            for r in results:
+                if r[1] in self.LUAS_DESTS['INBOUND']:
+                    dest = 'INBOUND'
+                elif r[1] in self.LUAS_DESTS['OUTBOUND']:
+                    dest = 'OUTBOUND'
+                else:
+                    raise DestError('Destination {} is neither INBOUND or OUTBOUND')
+                if stop not in data[dest]:
+                    self.data[dest][stop] = []
+                    self.data[dest][stop].append(r)
+
+        for dest in data:
+            for stop in dest:
+                data[dest][stop] = data[dest][stop][:self.RESULTS_COUNT]
+        
+        return data
 
     # Functions to fetch data from APIs
 
@@ -77,7 +107,7 @@ class DublinTransportData:
         json_data = urlopen(url).read().decode()
         data = loads(json_data)
         if data['errorcode'] == '0':
-            results = data['results'][:self.RESULT_COUNT]
+            results = data['results']
             return [(r['route'], r['destination'], r['duetime']) for r in results]
         elif data['errorcode'] == '1':
             return None
