@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+# TODO:  Why even have nginx serve the main page?  Just have static html file?
+
 from urllib.request import urlopen
 from os.path import join, expanduser
 from json import loads, dumps
@@ -18,10 +20,8 @@ class DublinTransportData:
     WU_URL =    ('http://api.wunderground.com/api/{}/'
                 'conditions/q/ie/{}.json')
 
-    LUAS_DESTS = {
-                    'INBOUND': {'LUAS The Point', 'LUAS Connolly'},
-                    'OUTBOUND': {'LUAS Tallaght', 'LUAS Saggart', 'LUAS Red Cow'}
-                    }
+    RTPI_WANTED_DATA = {'duetime', 'destination', 'route', 'additionalinformation',
+            'direction'}
 
     def __init__(self, conf_file=None):
         
@@ -48,41 +48,46 @@ class DublinTransportData:
         # TODO:  Build separate functions to get bus, bike and weather data
         # and just call them all from here
 
-        results = {'LUAS': {}, 'BUS': {}, 'BIKE': {}, 'WEATHER': {}}
+        return {
+                'LUAS': self.get_rtpi_data('LUAS'),
+                'BUS': self.get_rtpi_data('BUS'),
+                'BIKE': {},
+                'WEATHER': {}
+                }
 
-        for stop in self.LUAS_STOPS:
-            stop_id = self.LUAS_STOPS[stop]
-            results['LUAS'][stop] = self.fetch_rtpi_data(stop_id)
-        for stop in self.BUS_STOPS:
-            stop_id = self.BUS_STOPS[stop]
-            results['BUS'][stop] = self.fetch_rtpi_data(stop_id)
-        for stop in self.BIKE_STOPS:
-            stop_id = self.BIKE_STOPS[stop]
-            results['BIKE'] = self.fetch_bike_data(stop_id)
-        for station in self.WEATHER_STATIONS:
-            station_id = self.WEATHER_STATIONS[station]
-            results['WEATHER'][station] = self.fetch_weather_data(station_id)
-        return results
+        #for stop in self.LUAS_STOPS:
+        #    stop_id = self.LUAS_STOPS[stop]
+        #    results['LUAS'][stop] = self.fetch_rtpi_data(stop_id)
+        #for stop in self.BUS_STOPS:
+        #    stop_id = self.BUS_STOPS[stop]
+        #    results['BUS'][stop] = self.fetch_rtpi_data(stop_id)
+        #for stop in self.BIKE_STOPS:
+        #    stop_id = self.BIKE_STOPS[stop]
+        #    results['BIKE'] = self.fetch_bike_data(stop_id)
+        #for station in self.WEATHER_STATIONS:
+        #    station_id = self.WEATHER_STATIONS[station]
+        #    results['WEATHER'][station] = self.fetch_weather_data(station_id)
 
-    def get_luas_data(self):
-        data = {'INBOUND': {}, 'OUTBOUND': {}}
-        for stop in self.LUAS_STOPS:
-            stop_id = self.LUAS_STOPS[stop]
+    def get_rtpi_data(self, bus_or_luas):
+
+        if bus_or_luas == 'BUS':
+            stops = self.BUS_STOPS
+        elif bus_or_luas == 'LUAS':
+            stops = self.LUAS_STOPS
+        else:
+            raise ValueError('Argument must be "BUS" or "LUAS"')
+
+        data = {'Inbound': [], 'Outbound': []}
+        for stop in stops:
+            stop_id = stops[stop]
             results = self.fetch_rtpi_data(stop_id)
             for r in results:
-                if r[1] in self.LUAS_DESTS['INBOUND']:
-                    dest = 'INBOUND'
-                elif r[1] in self.LUAS_DESTS['OUTBOUND']:
-                    dest = 'OUTBOUND'
-                else:
-                    raise DestError('Destination {} is neither INBOUND or OUTBOUND')
-                if stop not in data[dest]:
-                    self.data[dest][stop] = []
-                    self.data[dest][stop].append(r)
+                dest = r['direction']
+                relevant_data = {k:r.get(k) for k in r if k in self.RTPI_WANTED_DATA}
+                data[dest].append(relevant_data)
 
         for dest in data:
-            for stop in dest:
-                data[dest][stop] = data[dest][stop][:self.RESULTS_COUNT]
+            data[dest] = data[dest][:self.RESULT_COUNT]
         
         return data
 
@@ -108,7 +113,8 @@ class DublinTransportData:
         data = loads(json_data)
         if data['errorcode'] == '0':
             results = data['results']
-            return [(r['route'], r['destination'], r['duetime']) for r in results]
+            #return [(r['route'], r['destination'], r['duetime']) for r in results]
+            return results
         elif data['errorcode'] == '1':
             return None
         else:
