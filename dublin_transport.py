@@ -51,8 +51,8 @@ class DublinTransportData:
         return {
                 'LUAS': self.get_rtpi_data('LUAS'),
                 'BUS': self.get_rtpi_data('BUS'),
-                'BIKE': {},
-                'WEATHER': {}
+                'BIKE': self.get_bike_data(),
+                'WEATHER': self.get_weather_data()
                 }
 
         #for stop in self.LUAS_STOPS:
@@ -91,6 +91,22 @@ class DublinTransportData:
         
         return data
 
+    def get_bike_data(self):
+
+        data = {}
+        for stop in self.BIKE_STOPS:
+            stop_id = self.BIKE_STOPS[stop]
+            data[stop] = self.fetch_bike_data(stop_id)
+        return data
+
+    def get_weather_data(self):
+
+        data = {}
+        for stn in self.WEATHER_STATIONS:
+            stn_id = self.WEATHER_STATIONS[stn]
+            data[stn] = self.fetch_weather_data(stn_id)
+        return data
+
     # Functions to fetch data from APIs
 
     def fetch_weather_data(self, station_id):
@@ -101,8 +117,7 @@ class DublinTransportData:
         weather = data['weather']
         temp = '{}ºC (feels like {}ºC)'.format(data['temp_c'],
                     data['feelslike_c'])
-        wind = '{} ({} kmph {})'.format(data['wind_string'],
-                    data['wind_kph'], data['wind_dir'])
+        wind = '{} kmph {}'.format(data['wind_kph'], data['wind_dir'])
         humidity = 'Humidity: {}'.format(data['relative_humidity'])
         return weather, temp, wind, humidity
 
