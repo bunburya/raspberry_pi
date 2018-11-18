@@ -27,7 +27,7 @@ class TransportPlugin(Plugin):
             raise e
         for bus in data['Inbound']:
             route, dest, due = bus['route'], bus['destination'], bus['duetime']
-            self.bot.bot.sendMessage(chat_id, '{} to {}, due in {}.'.format(route, dest, due))
+            self.bot.bot.sendMessage(chat_id, '{} to {}, due in {} minutes.'.format(route, dest, due))
         if not data['Inbound']:
             self.bot.bot.sendMessage(chat_id, 'No buses due.')
 
@@ -39,7 +39,7 @@ class TransportPlugin(Plugin):
             self.bot.bot.sendMessage(chat_id, 'Error fetching data.')
             raise e
         for luas in data['Inbound']:
-            dest, due = luas['destination'].lstrip('LUAS '), luas['duetime']
-            self.bot.bot.sendMessage(chat_id, 'To {}, due in {}.'.format(dest, due))
+            stop, dest, due = luas['stop'], luas['destination'].lstrip('LUAS '), luas['duetime']
+            self.bot.bot.sendMessage(chat_id, '{} to {}, due in {} minutes.'.format(stop, dest, due))
         if not data['Inbound']:
             self.bot.bot.sendMessage(chat_id, 'No Luas due.')

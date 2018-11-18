@@ -84,6 +84,7 @@ class DublinTransportData:
             for r in results:
                 dest = r['direction']
                 relevant_data = {k:r.get(k) for k in r if k in self.RTPI_WANTED_DATA}
+                relevant_data['stop'] = stop
                 data[dest].append(relevant_data)
 
         for dest in data:
