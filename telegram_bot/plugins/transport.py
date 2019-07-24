@@ -26,8 +26,12 @@ class TransportPlugin(Plugin):
             self.bot.bot.sendMessage(chat_id, 'Error fetching data.')
             raise e
         for bus in data['Inbound']:
-            route, dest, due = bus['route'], bus['destination'], bus['duetime']
-            self.bot.bot.sendMessage(chat_id, '{} to {}, due in {} minutes.'.format(route, dest, due))
+            route, dest, stop, due = bus['route'], bus['destination'], bus['stop'], bus['duetime']
+            if due == 'Due':
+                due_str = 'now'
+            else:
+                due_str = 'in {} minutes'.format(due)
+            self.bot.bot.sendMessage(chat_id, '{} to {} (from {}), due {}.'.format(route, dest, stop, due_str))
         if not data['Inbound']:
             self.bot.bot.sendMessage(chat_id, 'No buses due.')
 

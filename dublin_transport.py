@@ -17,9 +17,6 @@ class DublinTransportData:
     DB_URL =    ('https://api.jcdecaux.com/vls/v1/stations/{}'
                 '?contract=Dublin&apiKey={}')
 
-    WU_URL =    ('http://api.wunderground.com/api/{}/'
-                'conditions/q/ie/{}.json')
-
     RTPI_WANTED_DATA = {'duetime', 'destination', 'route', 'additionalinformation',
             'direction'}
 
@@ -36,39 +33,20 @@ class DublinTransportData:
 
         self.RESULT_COUNT = self.config.getint('CONFIG_VALUES', 'RESULT_COUNT')
         self.DB_API_KEY = self.config['CONFIG_VALUES']['DB_API_KEY']
-        self.WU_API_KEY = self.config['CONFIG_VALUES']['WU_API_KEY']
 
         self.LUAS_STOPS = self.config['LUAS_STOPS']
         self.BUS_STOPS = self.config['BUS_STOPS']
         self.BIKE_STOPS = self.config['BIKE_STOPS']
-        self.WEATHER_STATIONS = self.config['WEATHER_STATIONS']
 
     def get_all_data(self):
-
-        # TODO:  Build separate functions to get bus, bike and weather data
-        # and just call them all from here
 
         return {
                 'LUAS': self.get_rtpi_data('LUAS'),
                 'BUS': self.get_rtpi_data('BUS'),
                 'BIKE': self.get_bike_data(),
-                'WEATHER': self.get_weather_data()
                 }
 
-        #for stop in self.LUAS_STOPS:
-        #    stop_id = self.LUAS_STOPS[stop]
-        #    results['LUAS'][stop] = self.fetch_rtpi_data(stop_id)
-        #for stop in self.BUS_STOPS:
-        #    stop_id = self.BUS_STOPS[stop]
-        #    results['BUS'][stop] = self.fetch_rtpi_data(stop_id)
-        #for stop in self.BIKE_STOPS:
-        #    stop_id = self.BIKE_STOPS[stop]
-        #    results['BIKE'] = self.fetch_bike_data(stop_id)
-        #for station in self.WEATHER_STATIONS:
-        #    station_id = self.WEATHER_STATIONS[station]
-        #    results['WEATHER'][station] = self.fetch_weather_data(station_id)
-
-    def get_rtpi_data(self, bus_or_luas):
+    def get_rtpi_data(self, bus_or_luas, de_dup=True):
 
         if bus_or_luas == 'BUS':
             stops = self.BUS_STOPS
@@ -81,11 +59,26 @@ class DublinTransportData:
         for stop in stops:
             stop_id = stops[stop]
             results = self.fetch_rtpi_data(stop_id)
-            for r in results:
-                dest = r['direction']
-                relevant_data = {k:r.get(k) for k in r if k in self.RTPI_WANTED_DATA}
-                relevant_data['stop'] = stop
-                data[dest].append(relevant_data)
+            if results is not None:
+                for r in results:
+                    dest = r['direction']
+                    relevant_data = {k:r.get(k) for k in r if k in self.RTPI_WANTED_DATA}
+                    relevant_data['stop'] = stop
+                    add_result = True
+                    if de_dup:
+                        # Compare new result against each already recorded result (going the same direction).
+                        # If there is an existing result and the destination and route are the same BUT the
+                        # departing stops are DIFFERENT, then do not add the result.  This will allow us to
+                        # list multiple consecutive services going from the same stop but will remove any
+                        # such services departing from lower priority stops.  This assumes that a given
+                        # route will always serve all the same stops; if it is possible for a service to
+                        # sometimes serve stops A and B but other times only serve stop B, this may result
+                        # in the complete exclusion of certain buses that only serve stop B.
+                        for _r in data[dest]:
+                            if (_r['destination'] == r['destination']) and (_r['route'] == r['route']) and (_r['stop'] != stop):
+                                add_result = False
+                    if add_result:
+                        data[dest].append(relevant_data)
 
         for dest in data:
             data[dest] = data[dest][:self.RESULT_COUNT]
@@ -100,27 +93,7 @@ class DublinTransportData:
             data[stop] = self.fetch_bike_data(stop_id)
         return data
 
-    def get_weather_data(self):
-
-        data = {}
-        for stn in self.WEATHER_STATIONS:
-            stn_id = self.WEATHER_STATIONS[stn]
-            data[stn] = self.fetch_weather_data(stn_id)
-        return data
-
     # Functions to fetch data from APIs
-
-    def fetch_weather_data(self, station_id):
-
-        url = self.WU_URL.format(self.WU_API_KEY, station_id)
-        json_data = urlopen(url).read().decode()
-        data = loads(json_data)['current_observation']
-        weather = data['weather']
-        temp = '{}ºC (feels like {}ºC)'.format(data['temp_c'],
-                    data['feelslike_c'])
-        wind = '{} kmph {}'.format(data['wind_kph'], data['wind_dir'])
-        humidity = 'Humidity: {}'.format(data['relative_humidity'])
-        return weather, temp, wind, humidity
 
     def fetch_rtpi_data(self, stop_id):
 
