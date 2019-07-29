@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Dublin Data</title>
+	<!-- replace below -->
+	<link rel="stylesheet" href="http://bunburya.eu/songlist/style.css">
+    <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.1.1/socket.io.js"></script>
+    <script type="text/javascript">
+	$(document).ready(function() {
+		var socket = io.connect('http://192.168.0.11:5000');
+		socket.on('update', function(data) {
+			
+			// Update bus times
+			$('tr').remove('.bus-result');
+			var bus_inbound = data['BUS']['Inbound'];
+			for (var i = 0; i < bus_inbound.length; i++) {
+				var new_tr = $('<tr class="bus-result"></tr>');
+				new_tr.append(
+						$('<td class="bus-route"></th>').text(bus_inbound[i]['route']),
+						$('<td class="bus-stop"></th>').text(bus_inbound[i]['stop']),
+						$('<td class="bus-dest"></th>').text(bus_inbound[i]['destination']),
+						$('<td class="bus-due"></th>').text(bus_inbound[i]['duetime'])
+					);
+				$('#bus-data-container').append(new_tr);
+			}
+
+			// Update Luas times
+			$('tr').remove('.luas-result');
+			var luas_inbound = data['LUAS']['Inbound'];
+			for (var i = 0; i < luas_inbound.length; i++) {
+				var new_tr = $('<tr class="luas-result"></tr>');
+				new_tr.append(
+						$('<td class="luas-route"></td>').text(luas_inbound[i]['route']),
+						$('<td class="luas-stop"></td>').text(luas_inbound[i]['stop']),
+						$('<td class="luas-dest"></td>').text(luas_inbound[i]['destination']),
+						$('<td class="luas-due"></td>').text(luas_inbound[i]['duetime'])
+					);
+				$('#luas-data-container').append(new_tr);
+			}
+
+			// Set last updated
+			$('#last-updated').text(data['timestamp_str']);
+
+		});
+	});
+
+    </script>
+</head>
+<body>
+	<h1>Dublin Data</h1>
+	<p>Last updated at <b id="last-updated"></b></p>
+	<table id="bus-data-container">
+		<h2>Dublin Bus</h2>
+		<tr>
+			<th>Route</th>
+			<th>Stop</th>
+			<th>Destination</th>
+			<th>Due</th>
+		</tr>
+	</table>
+	<table id="luas-data-container">
+		<h2>Luas</h2>
+		<tr>
+			<th>Line</th>
+			<th>Stop</th>
+			<th>Destination</th>
+			<th>Due</th>
+		</tr>
+	</table>
+</body>
+</html>

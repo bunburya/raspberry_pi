@@ -2,6 +2,7 @@
 
 # TODO:  Why even have nginx serve the main page?  Just have static html file?
 
+from time import localtime, strftime
 from urllib.request import urlopen
 from os.path import join, expanduser
 from json import loads, dumps
@@ -10,6 +11,8 @@ from configparser import ConfigParser
 class RTPIError(Exception): pass
 
 class DublinTransportData:
+
+    MODES = {'BUS', 'LUAS', 'BIKE'}
 
     RTPI_URL =  ('https://data.smartdublin.ie/cgi-bin/rtpi/'
                 'realtimebusinformation?stopid={}')
@@ -40,11 +43,20 @@ class DublinTransportData:
 
     def get_all_data(self):
 
-        return {
-                'LUAS': self.get_rtpi_data('LUAS'),
-                'BUS': self.get_rtpi_data('BUS'),
-                'BIKE': self.get_bike_data(),
-                }
+        return self.get_data(*self.MODES)
+
+    def get_data(self, *modes):
+
+        results = {}
+        if 'LUAS' in modes:
+            results['LUAS'] = self.get_rtpi_data('LUAS')
+        if 'BUS' in modes:
+            results['BUS'] = self.get_rtpi_data('BUS')
+        if 'BIKE' in modes:
+            results['BIKE'] = self.get_bike_data()
+        results['timestamp'] = localtime()
+        results['timestamp_str'] = strftime('%H:%M:%S on %A %d %B %Y')
+        return results
 
     def get_rtpi_data(self, bus_or_luas, de_dup=True):
 
@@ -81,7 +93,9 @@ class DublinTransportData:
                         data[dest].append(relevant_data)
 
         for dest in data:
-            data[dest] = data[dest][:self.RESULT_COUNT]
+            data[dest] = sorted(data[dest],
+                    key=lambda r: 0 if r['duetime'] == 'Due' else int(r['duetime'])
+                    )[:self.RESULT_COUNT]
         
         return data
 
