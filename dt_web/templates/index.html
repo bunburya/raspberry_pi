@@ -11,33 +11,59 @@
 	$(document).ready(function() {
 		var socket = io.connect('http://192.168.0.11:5000');
 		socket.on('update', function(data) {
-			
+			// TODO:  Two tables side by side; each one pre-populated with empty cells according to
+			// RESULT_COUNT.  On each update, blank all cells and then re-populate as necessary.
+
 			// Update bus times
-			$('tr').remove('.bus-result');
+			$('tr').remove('.bus-luas-result');
 			var bus_inbound = data['BUS']['Inbound'];
-			for (var i = 0; i < bus_inbound.length; i++) {
-				var new_tr = $('<tr class="bus-result"></tr>');
+			var luas_inbound = data['LUAS']['Inbound'];
+			var max_len = Math.max(bus_inbound.length, luas_inbound.length);
+			var min_len = Math.min(bus_inbound.length, luas_inbound.length);
+			for (var i = 0; i < min_len; i++) {
+				var new_tr = $('<tr class="bus-luas-result"></tr>');
 				new_tr.append(
 						$('<td class="bus-route"></th>').text(bus_inbound[i]['route']),
 						$('<td class="bus-stop"></th>').text(bus_inbound[i]['stop']),
 						$('<td class="bus-dest"></th>').text(bus_inbound[i]['destination']),
-						$('<td class="bus-due"></th>').text(bus_inbound[i]['duetime'])
-					);
-				$('#bus-data-container').append(new_tr);
-			}
-
-			// Update Luas times
-			$('tr').remove('.luas-result');
-			var luas_inbound = data['LUAS']['Inbound'];
-			for (var i = 0; i < luas_inbound.length; i++) {
-				var new_tr = $('<tr class="luas-result"></tr>');
-				new_tr.append(
+						$('<td class="bus-due"></th>').text(bus_inbound[i]['duetime']),
 						$('<td class="luas-route"></td>').text(luas_inbound[i]['route']),
 						$('<td class="luas-stop"></td>').text(luas_inbound[i]['stop']),
 						$('<td class="luas-dest"></td>').text(luas_inbound[i]['destination']),
 						$('<td class="luas-due"></td>').text(luas_inbound[i]['duetime'])
 					);
-				$('#luas-data-container').append(new_tr);
+				$('#bus-luas-data-container').append(new_tr);
+			}
+			if (bus_inbound.length > luas_inbound.length) {
+				for (var i = min_len; i < max_len; i++) {
+					var new_tr = $('<tr class="bus-luas-result"></tr>');
+					new_tr.append(
+							$('<td class="bus-route"></th>').text(bus_inbound[i]['route']),
+							$('<td class="bus-stop"></th>').text(bus_inbound[i]['stop']),
+							$('<td class="bus-dest"></th>').text(bus_inbound[i]['destination']),
+							$('<td class="bus-due"></th>').text(bus_inbound[i]['duetime']),
+							$('<td class="luas-route"></td>'),
+							$('<td class="luas-stop"></td>'),
+							$('<td class="luas-dest"></td>'),
+							$('<td class="luas-due"></td>')
+						);
+					$('#bus-luas-data-container').append(new_tr);
+				}
+			} else if (bus_inbound.length < luas_inbound.length) {
+				for (var i = min_len; i < max_len; i++) {
+					var new_tr = $('<tr class="bus-luas-result"></tr>');
+					new_tr.append(
+							$('<td class="bus-route"></th>'),
+							$('<td class="bus-stop"></th>'),
+							$('<td class="bus-dest"></th>'),
+							$('<td class="bus-due"></th>'),
+							$('<td class="luas-route"></td>').text(luas_inbound[i]['route']),
+							$('<td class="luas-stop"></td>').text(luas_inbound[i]['stop']),
+							$('<td class="luas-dest"></td>').text(luas_inbound[i]['destination']),
+							$('<td class="luas-due"></td>').text(luas_inbound[i]['duetime'])
+						);
+					$('#bus-luas-data-container').append(new_tr);
+				}
 			}
 
 			// Set last updated
@@ -51,22 +77,20 @@
 <body>
 	<h1>Dublin Data</h1>
 	<p>Last updated at <b id="last-updated"></b></p>
-	<table id="bus-data-container">
-		<h2>Dublin Bus</h2>
+	<table id="bus-luas-data-container">
+		<tr>
+			<td colspan="4"><h2>Dublin Bus</h2></td>
+			<td colspan="4"><h2>Luas</h2></td>
+		</tr>
 		<tr>
 			<th>Route</th>
 			<th>Stop</th>
 			<th>Destination</th>
-			<th>Due</th>
-		</tr>
-	</table>
-	<table id="luas-data-container">
-		<h2>Luas</h2>
-		<tr>
+			<th>Due (minutes)</th>
 			<th>Line</th>
 			<th>Stop</th>
 			<th>Destination</th>
-			<th>Due</th>
+			<th>Due (minutes)</th>
 		</tr>
 	</table>
 </body>
